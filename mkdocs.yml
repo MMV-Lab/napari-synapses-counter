@@ -1,0 +1,11 @@
+site_name: napari-synapses-counter
+site_description: This plugin is used to count synapses.
+site_author: Peter Lampen
+
+theme: readthedocs
+
+
+repo_url: https://github.com/MMV-Lab/napari-synapses-counter
+
+pages:
+- Home: index.md
