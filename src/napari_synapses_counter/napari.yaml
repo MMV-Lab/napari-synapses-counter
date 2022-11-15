@@ -2,20 +2,9 @@ name: napari-synapses-counter
 display_name: Synapses Counter
 contributions:
   commands: 
-    - id: napari-synapses-counter.make_qwidget
-      python_name: napari_synapses_counter._widget:ExampleQWidget
-      title: Make example QWidget
-    - id: napari-synapses-counter.make_magic_widget
-      python_name: napari_synapses_counter._widget:example_magic_widget
-      title: Make example magic widget
-    - id: napari-synapses-counter.make_func_widget
-      python_name: napari_synapses_counter._widget:example_function_widget
-      title: Make example function widget   
+    - id: napari-synapses-counter.SynapsesCounter
+      python_name: napari_synapses_counter._widget:SynapsesCounter
+      title: Count Synapses
   widgets:
-    - command: napari-synapses-counter.make_qwidget
-      display_name: Example QWidget
-    - command: napari-synapses-counter.make_magic_widget
-      display_name: Example Magic Widget
-    - command: napari-synapses-counter.make_func_widget
-      autogenerate: true
-      display_name: Example Function Widget 
+    - command: napari-synapses-counter.SynapsesCounter
+      display_name: Count Synapses
