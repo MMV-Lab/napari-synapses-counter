@@ -5,13 +5,37 @@ from qtpy.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, \
     QMessageBox
 from qtpy.QtCore import Qt
 from tifffile import imread
+import numpy as np
+
+
+class MyParticleAnalyzer:
+    def __init__(self, minSize, maxSize, minCirc, maxCirc):
+        self.myCount = 0
+        self.myTotalSize = 0
+        self.mySumSqSize = 0
+        print('call ParticleAnalyzer,', 'minSize', minSize, 'maxSize', maxSize)
+
+
+class MyParticleAnalyzer3D:
+    def __init__(self, minSize, maxSize, minCirc, maxCirc):
+        self.myCount = 0
+        self.myTotalSize = 0
+        self.mySumSqSize = 0
+        self.minSize = int(round(minSize, 0))
+        self.maxSize = int(round(maxSize, 0))
+        print('do whatever it has to do,', 'minSize', minSize, 'maxSize', maxSize)
 
 
 class SynapsesCounter(QWidget):
     def __init__(self, napari_viewer):
         super().__init__()
         self.viewer = napari_viewer
+
+        self.partAnalyzers = []
+        self.partAnalyzers3D = []
+
         widget1 = QWidget()
+
 
         # definition of the required layouts
         vbox1 = QVBoxLayout()
@@ -238,7 +262,8 @@ class SynapsesCounter(QWidget):
 
     def ok_button(self):
         parameter = self.get_parameter()
-        print('parameter:', parameter)
+        # print('parameter:', parameter)    # test output
+        self.runSynapseCounter(parameter)
 
 
     def cancel_button(self):
@@ -356,3 +381,40 @@ class SynapsesCounter(QWidget):
                 self.le_minSizePos.text(),
                 self.le_maxSizePos.text())
         return formatstr % data
+
+
+    def runSynapseCounter(self, parameter):
+        minSize = min(parameter['minSizePre'], parameter['minSizePos'])
+        maxSize = max(parameter['maxSizePre'], parameter['maxSizePos'])
+
+        if parameter['is3d']:
+            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
+                parameter['minSizePre'], parameter['maxSizePre'], 0.0, 1.0))
+            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
+                parameter['minSizePos'], parameter['maxSizePos'], 0.0, 1.0))
+            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
+                minSize, maxSize, 0.0, 1.0))
+        else:
+            self.partAnalyzers.append(MyParticleAnalyzer( \
+                parameter['minSizePre'], parameter['maxSizePre'], 0.0, 1.0))
+            self.partAnalyzers.append(MyParticleAnalyzer( \
+                parameter['minSizePos'], parameter['maxSizePos'], 0.0, 1.0))
+            self.partAnalyzers.append(MyParticleAnalyzer( \
+                minSize, maxSize, 0.0, 1.0))
+        self.runSynapseCounterDemo(parameter)
+
+
+    def runSynapseCounterDemo(self, parameter):
+        (fname, filter) = QFileDialog.getOpenFileName(self,
+            'Select an image file', 'c:\\', 'Tiff files (*.tiff *.tif)')
+
+        if fname == '':     # User pressed 'Cancel'
+            return
+        else:
+            image = imread(fname)
+            print('fname', fname)
+            print('type(image)', type(image))
+            print('image.shape', image.shape)
+            print('image.ndim', image.ndim)
+            print('image.size', image.size)
+            print('image.dtype', image.dtype)
