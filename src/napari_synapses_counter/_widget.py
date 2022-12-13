@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from napari.layers import Image
 import numpy as np
+from pandas import DataFrame
 from qtpy.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, \
     QPushButton, QRadioButton, QCheckBox, QLineEdit, QComboBox, \
     QVBoxLayout, QGridLayout, QButtonGroup, QScrollArea, QFileDialog, \
@@ -10,6 +11,7 @@ from scipy.ndimage import gaussian_filter, distance_transform_edt, label
 from skimage.feature import peak_local_max
 from skimage.filters import threshold_isodata, threshold_li, threshold_mean, \
     threshold_minimum, threshold_otsu, threshold_triangle, threshold_yen
+from skimage.measure import regionprops_table
 from skimage.morphology import remove_small_objects
 from skimage.restoration import rolling_ball
 from skimage.segmentation import watershed
@@ -145,9 +147,9 @@ class SynapsesCounter(QWidget):
         self.cb_preChannelTag = QComboBox()
         self.cb_preChannelTag.addItems(list1)
         self.cb_preChannelTag.setCurrentIndex(0)    # C1
-        self.cb_posChannelTag = QComboBox()
-        self.cb_posChannelTag.addItems(list1)
-        self.cb_posChannelTag.setCurrentIndex(2)    # C3
+        self.cb_postChannelTag = QComboBox()
+        self.cb_postChannelTag.addItems(list1)
+        self.cb_postChannelTag.setCurrentIndex(2)   # C3
 
         list1 = ['Default', 'Huang', 'Intermodes', 'IsoData', 'IJ_IsoData', \
             'Li', 'MaxEntropy', 'Mean', 'MinError', 'Minimum', 'Moments', \
@@ -161,21 +163,21 @@ class SynapsesCounter(QWidget):
         self.le_maxFiltRad  = QLineEdit('2.0')
         self.le_minSizePre  = QLineEdit('10.0')
         self.le_maxSizePre  = QLineEdit('400.0')
-        self.le_minSizePos  = QLineEdit('10.0')
-        self.le_maxSizePos  = QLineEdit('400.0')
+        self.le_minSizePost = QLineEdit('10.0')
+        self.le_maxSizePost = QLineEdit('400.0')
 
         # place the widgets within the 3rd grid
-        grid3.addWidget(self.cb_imgType,       1, 1)
-        grid3.addWidget(self.cb_preChannelTag, 2, 1)
-        grid3.addWidget(self.cb_posChannelTag, 3, 1)
-        grid3.addWidget(self.le_resizeWidth,   4, 1)
-        grid3.addWidget(self.le_rollBallRad,   5, 1)
-        grid3.addWidget(self.le_maxFiltRad,    6, 1)
-        grid3.addWidget(self.cb_threshMethod,  7, 1)
-        grid3.addWidget(self.le_minSizePre,    8, 1)
-        grid3.addWidget(self.le_maxSizePre,    9, 1)
-        grid3.addWidget(self.le_minSizePos,   10, 1)
-        grid3.addWidget(self.le_maxSizePos,   11, 1)
+        grid3.addWidget(self.cb_imgType,        1, 1)
+        grid3.addWidget(self.cb_preChannelTag,  2, 1)
+        grid3.addWidget(self.cb_postChannelTag, 3, 1)
+        grid3.addWidget(self.le_resizeWidth,    4, 1)
+        grid3.addWidget(self.le_rollBallRad,    5, 1)
+        grid3.addWidget(self.le_maxFiltRad,     6, 1)
+        grid3.addWidget(self.cb_threshMethod,   7, 1)
+        grid3.addWidget(self.le_minSizePre,     8, 1)
+        grid3.addWidget(self.le_maxSizePre,     9, 1)
+        grid3.addWidget(self.le_minSizePost,    10, 1)
+        grid3.addWidget(self.le_maxSizePost,    11, 1)
 
         # third column: units
         grid3.addWidget(QLabel('px'), 4, 2)
@@ -243,9 +245,9 @@ class SynapsesCounter(QWidget):
         self.cb_preChannelTag.clear()                # remove all items
         self.cb_preChannelTag.addItems(list1)
         self.cb_preChannelTag.setCurrentIndex(0)
-        self.cb_posChannelTag.clear()
-        self.cb_posChannelTag.addItems(list1)
-        self.cb_posChannelTag.setCurrentIndex(1)
+        self.cb_postChannelTag.clear()
+        self.cb_postChannelTag.addItems(list1)
+        self.cb_postChannelTag.setCurrentIndex(1)
 
 
     def reset_button(self):
@@ -259,15 +261,15 @@ class SynapsesCounter(QWidget):
         self.lb_outputDirField.clear()
         self.cb_imgType.setCurrentIndex(0)  # Multi-channel
         self.cb_preChannelTag.setCurrentIndex(0)  # red
-        self.cb_posChannelTag.setCurrentIndex(2) # green
+        self.cb_postChannelTag.setCurrentIndex(2) # green
         self.le_resizeWidth.setText('0')
         self.le_rollBallRad.setText('10.0')
         self.le_maxFiltRad.setText('2.0')
         self.cb_threshMethod.setCurrentIndex(11) # Otsu
         self.le_minSizePre.setText('10.0')
         self.le_maxSizePre.setText('400.0')
-        self.le_minSizePos.setText('10.0')
-        self.le_maxSizePos.setText('400.0')
+        self.le_minSizePost.setText('10.0')
+        self.le_maxSizePost.setText('400.0')
 
 
     def ok_button(self):
@@ -282,17 +284,17 @@ class SynapsesCounter(QWidget):
 
     def get_parameter(self):
         parameter = {
-            'doOpenedImage': self.rb_doOpenedImageButton.isChecked(),
-            'is3d':          self.rb_is3dButton.isChecked(),
-            'doSubFolders':  self.xb_doSubFoldersButton.isChecked(),
-            'doOutput':      self.xb_doOutputButton.isChecked(),
-            'inputDir':      self.lb_inputDirField.text(),
-            'outputDir':     self.lb_outputDirField.text(),
-            'imgType':       self.cb_imgType.currentText(),
-            'preChannelTag': self.cb_preChannelTag.currentText(),
-            'posChannelTag': self.cb_posChannelTag.currentText(),
-            'threshMethod':  self.cb_threshMethod.currentText(),
-            'minDistance':   15,
+            'doOpenedImage':    self.rb_doOpenedImageButton.isChecked(),
+            'is3d':             self.rb_is3dButton.isChecked(),
+            'doSubFolders':     self.xb_doSubFoldersButton.isChecked(),
+            'doOutput':         self.xb_doOutputButton.isChecked(),
+            'inputDir':         self.lb_inputDirField.text(),
+            'outputDir':        self.lb_outputDirField.text(),
+            'imgType':          self.cb_imgType.currentText(),
+            'preChannelTag':    self.cb_preChannelTag.currentText(),
+            'postChannelTag':   self.cb_postChannelTag.currentText(),
+            'threshMethod':     self.cb_threshMethod.currentText(),
+            'minDistance':      15,
         }
 
 
@@ -329,14 +331,14 @@ class SynapsesCounter(QWidget):
             self.error_message(text)
 
         try:
-            parameter['minSizePos'] = float(self.le_minSizePos.text())
+            parameter['minSizePost'] = float(self.le_minSizePost.text())
         except ValueError as err:
             text = 'Integer value expected for min. postsynaptic particle ' + \
                 'size:\n' + str(err)
             self.error_message(text)
 
         try:
-            parameter['maxSizePos'] = float(self.le_maxSizePos.text())
+            parameter['maxSizePost'] = float(self.le_maxSizePost.text())
         except ValueError as err:
             text = 'Integer value expected for max. postsynaptic particle ' + \
                 'size:\n' + str(err)
@@ -354,58 +356,69 @@ class SynapsesCounter(QWidget):
 
 
     def runSynapseCounter(self, parameter):
-        minSize = min(parameter['minSizePre'], parameter['minSizePos'])
-        maxSize = max(parameter['maxSizePre'], parameter['maxSizePos'])
+        minSize = min(parameter['minSizePre'], parameter['minSizePost'])
+        maxSize = max(parameter['maxSizePre'], parameter['maxSizePost'])
 
-        if parameter['is3d']:
+        '''if parameter['is3d']:
             self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
                 parameter['minSizePre'], parameter['maxSizePre'], 0.0, 1.0))
             self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
-                parameter['minSizePos'], parameter['maxSizePos'], 0.0, 1.0))
+                parameter['minSizePost'], parameter['maxSizePost'], 0.0, 1.0))
             self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
                 minSize, maxSize, 0.0, 1.0))
         else:
             self.partAnalyzers.append(MyParticleAnalyzer( \
                 parameter['minSizePre'], parameter['maxSizePre'], 0.0, 1.0))
             self.partAnalyzers.append(MyParticleAnalyzer( \
-                parameter['minSizePos'], parameter['maxSizePos'], 0.0, 1.0))
+                parameter['minSizePost'], parameter['maxSizePost'], 0.0, 1.0))
             self.partAnalyzers.append(MyParticleAnalyzer( \
-                minSize, maxSize, 0.0, 1.0))
+                minSize, maxSize, 0.0, 1.0)) '''
 
         for layer in self.viewer.layers:
-            if layer.name == 'control11' and type(layer) == Image:
+            #if layer.name == 'control11' and type(layer) == Image:
+            if type(layer) == Image:
                 image = layer.data
                 break
 
-        """(fname, filter) = QFileDialog.getOpenFileName(self,
-            'Select an image file', 'c:\\', 'Tiff files (*.tiff *.tif)')
-
-        if fname == '':     # User pressed 'Cancel'
+        if parameter['imgType'] == 'Multi-channel':
+            print('Not jet implemented!')
             return
-        else:
-            image = imread(fname)
-            print('fname', fname)
-            #print('type(image)', type(image))
-            print('image.shape', image.shape)
-            print('image.ndim', image.ndim)
-            #print('image.size', image.size)
-            print('image.dtype', image.dtype) """
+        elif parameter['imgType'] == 'RGB':
+            if parameter['preChannelTag']   == 'red':
+                preChannel = image[:, :, 0]
+            elif parameter['preChannelTag'] == 'green':
+                preChannel = image[:, :, 1]
+            elif parameter['preChannelTag'] == 'blue':
+                preChannel = image[:, :, 2]
 
-        if parameter['preChannelTag'] == 'red':
-            preChannel = image[:, :, 0]
-        elif parameter['preChannelTag'] == 'green':
-            preChannel = image[:, :, 1]
-        elif parameter['preChannelTag'] == 'blue':
-            preChannel = image[:, :, 2]
+            if parameter['postChannelTag']   == 'red':
+                postChannel = image[:, :, 0]
+            elif parameter['postChannelTag'] == 'green':
+                postChannel = image[:, :, 1]
+            elif parameter['postChannelTag'] == 'blue':
+                postChannel = image[:, :, 2]
 
-        if parameter['posChannelTag'] == 'red':
-            posChannel = image[:, :, 0]
-        elif parameter['posChannelTag'] == 'green':
-            posChannel = image[:, :, 1]
-        elif parameter['posChannelTag'] == 'blue':
-            posChannel = image[:, :, 2]
+        # Work with the presynaptic protein channel
+        preChannel = self.cleanUp(preChannel, parameter)
+        self.viewer.add_image(data=preChannel, name='presynaptic proteins')
 
-        self.cleanUp(preChannel, parameter)
+        preProps = regionprops_table(preChannel, properties=('label', 'centroid', \
+            'equivalent_diameter_area', 'eccentricity'))
+        df = DataFrame(preProps)
+        #print(df)
+
+        # Work with the postsynaptic protein channel
+        postChannel = self.cleanUp(postChannel, parameter)
+        self.viewer.add_image(data=postChannel, name='postsynaptic proteins')
+
+        postProps = regionprops_table(postChannel, properties=('label', 'centroid', \
+            'equivalent_diameter_area', 'eccentricity'))
+        df = DataFrame(postProps)
+        #print(df)
+
+        #overlapMask = np.logical_and(preChannel, postChannel)
+        overlapMask = self.calculate_overlap(preChannel, postChannel, 10.0)
+        self.viewer.add_image(data=overlapMask, name='overlap mask')
 
 
     def cleanUp(self, channel, parameter):
@@ -459,5 +472,55 @@ class SynapsesCounter(QWidget):
 
         # d) Find watershed basins in 'distance' flooded from given markers
         channel = watershed(-distance, markers, mask=channel)
-        self.viewer.add_image(data=channel, name='result of cleanUp')
         print('num_features', num_features)
+        return channel
+
+
+    def calculate_overlap(self, preChannel, postChannel, limit):
+        # Preset the mask with zeros
+        overlap_mask = np.zeros(preChannel.shape)
+        limit = limit / 100.0       # Limit is in %
+
+        # find the numbers of segments in the preChannel
+        preSegments = np.unique(preChannel)
+        # The segment with the number 0 is the background
+        if preSegments[0] == 0:
+            preSegments = preSegments[1:]
+
+        # loop over all preSegments
+        for seg_i in preSegments:
+            # coordinates of the pixels in preSegment seg_i
+            r1, c1 = np.where(preChannel == seg_i)
+            sizePreSegment = len(r1)
+            # print('preSegment =', seg_i, 'size =', sizePreSegment)
+
+            # find all postSegments within preSegment i
+            postSegments = np.unique(postChannel[r1, c1])
+            # The segment with the number 0 is the background
+            if postSegments[0] == 0:
+                postSegments = postSegments[1:]
+            if len(postSegments) == 0:      # no overlap found
+                continue
+            # print('postSegments', postSegments)
+
+            # loop over the postSegments in preSegment seg_i
+            for seg_j in postSegments:
+                # coordinates of the pixels in postSegment seg_j
+                r2, c2 = np.where(postChannel == seg_j)
+                sizePostSegment = len(r2)
+                # print('postSegment =', seg_j, 'size =', sizePostSegment)
+
+                minSizeSegment = min(sizePreSegment, sizePostSegment)
+                minOverlap = int(minSizeSegment * limit)
+
+                # coordinates of the overlapped pixels
+                r3, c3 = np.where((preChannel == seg_i) & (postChannel == seg_j))
+                sizeOverlap = len(r3)
+                if sizeOverlap < minOverlap:
+                    continue
+                else:
+                    # mark the found pixels
+                    # print('sizeOverlap =', sizeOverlap)
+                    overlap_mask[r3, c3] = 1
+
+        return overlap_mask

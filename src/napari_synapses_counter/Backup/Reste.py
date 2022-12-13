@@ -37,3 +37,19 @@
                 self.le_minSizePos.text(),
                 self.le_maxSizePos.text())
         return formatstr % data
+
+
+    def read_image(self, parameter)
+        (fname, filter) = QFileDialog.getOpenFileName(self,
+            'Select an image file', 'c:\\', 'Tiff files (*.tiff *.tif)')
+
+        if fname == '':     # User pressed 'Cancel'
+            return
+        else:
+            image = imread(fname)
+            print('fname', fname)
+            #print('type(image)', type(image))
+            print('image.shape', image.shape)
+            print('image.ndim', image.ndim)
+            #print('image.size', image.size)
+            print('image.dtype', image.dtype)
