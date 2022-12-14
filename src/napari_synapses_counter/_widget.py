@@ -129,10 +129,12 @@ class SynapsesCounter(QWidget):
             'Rolling ball radius:',
             'Maximum filter radius:',
             'Method of threshold adjustment:',
+            'Minimum distance for local max',
             'Presynaptic particle size',
             'Max. presynaptic particle size',
             'Min. postsynaptic particle size',
-            'Max. postsynaptic particle size']:
+            'Max. postsynaptic particle size',
+            'Overlap lower limit']:
             label = QLabel(str1)
             grid3.addWidget(label, row, 0, alignment=Qt.AlignRight)
             row += 1
@@ -158,13 +160,15 @@ class SynapsesCounter(QWidget):
         self.cb_threshMethod.addItems(list1)
         self.cb_threshMethod.setCurrentIndex(11)      # Otsu
 
-        self.le_resizeWidth = QLineEdit('0')
-        self.le_rollBallRad = QLineEdit('10.0')
-        self.le_maxFiltRad  = QLineEdit('2.0')
-        self.le_minSizePre  = QLineEdit('10.0')
-        self.le_maxSizePre  = QLineEdit('400.0')
-        self.le_minSizePost = QLineEdit('10.0')
-        self.le_maxSizePost = QLineEdit('400.0')
+        self.le_resizeWidth  = QLineEdit('0')
+        self.le_rollBallRad  = QLineEdit('10.0')
+        self.le_maxFiltRad   = QLineEdit('2.0')
+        self.le_minDistance  = QLineEdit('15')
+        self.le_minSizePre   = QLineEdit('10.0')
+        self.le_maxSizePre   = QLineEdit('400.0')
+        self.le_minSizePost  = QLineEdit('10.0')
+        self.le_maxSizePost  = QLineEdit('400.0')
+        self.le_overlapLimit = QLineEdit('10.0')
 
         # place the widgets within the 3rd grid
         grid3.addWidget(self.cb_imgType,        1, 1)
@@ -174,14 +178,18 @@ class SynapsesCounter(QWidget):
         grid3.addWidget(self.le_rollBallRad,    5, 1)
         grid3.addWidget(self.le_maxFiltRad,     6, 1)
         grid3.addWidget(self.cb_threshMethod,   7, 1)
-        grid3.addWidget(self.le_minSizePre,     8, 1)
-        grid3.addWidget(self.le_maxSizePre,     9, 1)
-        grid3.addWidget(self.le_minSizePost,    10, 1)
-        grid3.addWidget(self.le_maxSizePost,    11, 1)
+        grid3.addWidget(self.le_minDistance,    8, 1)
+        grid3.addWidget(self.le_minSizePre,     9, 1)
+        grid3.addWidget(self.le_maxSizePre,    10, 1)
+        grid3.addWidget(self.le_minSizePost,   11, 1)
+        grid3.addWidget(self.le_maxSizePost,   12, 1)
+        grid3.addWidget(self.le_overlapLimit,  13, 1)
 
         # third column: units
         grid3.addWidget(QLabel('px'), 4, 2)
-        for row in range(8, 12):
+        grid3.addWidget(QLabel('px'), 8, 2)
+        grid3.addWidget(QLabel('%'), 13, 2)
+        for row in range(9, 13):
             grid3.addWidget(QLabel('px² or voxels'), row, 2)
 
         # some buttons
@@ -266,15 +274,19 @@ class SynapsesCounter(QWidget):
         self.le_rollBallRad.setText('10.0')
         self.le_maxFiltRad.setText('2.0')
         self.cb_threshMethod.setCurrentIndex(11) # Otsu
+        self.lw_minDistance.setText('15')
         self.le_minSizePre.setText('10.0')
         self.le_maxSizePre.setText('400.0')
         self.le_minSizePost.setText('10.0')
         self.le_maxSizePost.setText('400.0')
+        self.le_overlapLimit.setText('10.0')
 
 
     def ok_button(self):
         parameter = self.get_parameter()
-        # print('parameter:', parameter)    # test output
+        print('parameter:', parameter)    # test output
+        if parameter['Error'] == True:
+            return
         self.runSynapseCounter(parameter)
 
 
@@ -294,54 +306,75 @@ class SynapsesCounter(QWidget):
             'preChannelTag':    self.cb_preChannelTag.currentText(),
             'postChannelTag':   self.cb_postChannelTag.currentText(),
             'threshMethod':     self.cb_threshMethod.currentText(),
-            'minDistance':      15,
+            'Error':            False,
         }
 
 
         try:
             parameter['resizeWidth'] = int(self.le_resizeWidth.text())
         except ValueError as err:
+            parameter['Error'] = True
             text = 'Integer value expected for resize image width:\n' + str(err)
             self.error_message(text)
 
         try:
             parameter['rollBallRad'] = float(self.le_rollBallRad.text())
         except ValueError as err:
+            parameter['Error'] = True
             text = 'Float value expected for rolling ball radius:\n' + str(err)
             self.error_message(text)
 
         try:
             parameter['maxFiltRad'] = float(self.le_maxFiltRad.text())
         except ValueError as err:
+            parameter['Error'] = True
             text = 'Float value expected for maximum filter radius:\n' + str(err)
+            self.error_message(text)
+
+        try:
+            parameter['minDistance'] = int(self.le_minDistance.text())
+        except ValueError as err:
+            parameter['Error'] = True
+            text = 'Integer value expected for minimum distance:\n' + str(err)
             self.error_message(text)
 
         try:
             parameter['minSizePre'] = float(self.le_minSizePre.text())
         except ValueError as err:
-            text = 'Integer value expected for presynaptic particle size:\n' + \
+            parameter['Error'] = True
+            text = 'Float value expected for presynaptic particle size:\n' + \
                 str(err)
             self.error_message(text)
 
         try:
             parameter['maxSizePre'] = float(self.le_maxSizePre.text())
         except ValueError as err:
-            text = 'Integer value expected for max. presynaptic particle ' + \
+            parameter['Error'] = True
+            text = 'Float value expected for max. presynaptic particle ' + \
                 'size:\n' + str(err)
             self.error_message(text)
 
         try:
             parameter['minSizePost'] = float(self.le_minSizePost.text())
         except ValueError as err:
-            text = 'Integer value expected for min. postsynaptic particle ' + \
+            parameter['Error'] = True
+            text = 'Float value expected for min. postsynaptic particle ' + \
                 'size:\n' + str(err)
             self.error_message(text)
 
         try:
             parameter['maxSizePost'] = float(self.le_maxSizePost.text())
         except ValueError as err:
-            text = 'Integer value expected for max. postsynaptic particle ' + \
+            parameter['Error'] = True
+            text = 'Float value expected for max. postsynaptic particle ' + \
                 'size:\n' + str(err)
+            self.error_message(text)
+
+        try:
+            parameter['overlapLimit'] = float(self.le_overlapLimit.text())
+        except ValueError as err:
+            parameter['Error'] = True
+            text = 'Float value expected for overlap lower limit:\n' + str(err)
             self.error_message(text)
         return parameter
 
@@ -417,7 +450,8 @@ class SynapsesCounter(QWidget):
         #print(df)
 
         #overlapMask = np.logical_and(preChannel, postChannel)
-        overlapMask = self.calculate_overlap(preChannel, postChannel, 10.0)
+        overlapMask = self.calculate_overlap(preChannel, postChannel, \
+            parameter['overlapLimit'])
         self.viewer.add_image(data=overlapMask, name='overlap mask')
 
 
@@ -476,10 +510,10 @@ class SynapsesCounter(QWidget):
         return channel
 
 
-    def calculate_overlap(self, preChannel, postChannel, limit):
+    def calculate_overlap(self, preChannel, postChannel, overlapLimit):
         # Preset the mask with zeros
         overlap_mask = np.zeros(preChannel.shape)
-        limit = limit / 100.0       # Limit is in %
+        overlapLimit /= 100.0           # overlapLimit is in %
 
         # find the numbers of segments in the preChannel
         preSegments = np.unique(preChannel)
@@ -492,26 +526,23 @@ class SynapsesCounter(QWidget):
             # coordinates of the pixels in preSegment seg_i
             r1, c1 = np.where(preChannel == seg_i)
             sizePreSegment = len(r1)
-            # print('preSegment =', seg_i, 'size =', sizePreSegment)
 
-            # find all postSegments within preSegment i
+            # find all postSegments within preSegment seg_i
             postSegments = np.unique(postChannel[r1, c1])
             # The segment with the number 0 is the background
             if postSegments[0] == 0:
                 postSegments = postSegments[1:]
             if len(postSegments) == 0:      # no overlap found
                 continue
-            # print('postSegments', postSegments)
 
-            # loop over the postSegments in preSegment seg_i
+            # loop over the found postSegments
             for seg_j in postSegments:
                 # coordinates of the pixels in postSegment seg_j
                 r2, c2 = np.where(postChannel == seg_j)
                 sizePostSegment = len(r2)
-                # print('postSegment =', seg_j, 'size =', sizePostSegment)
 
                 minSizeSegment = min(sizePreSegment, sizePostSegment)
-                minOverlap = int(minSizeSegment * limit)
+                minOverlap = int(minSizeSegment * overlapLimit)
 
                 # coordinates of the overlapped pixels
                 r3, c3 = np.where((preChannel == seg_i) & (postChannel == seg_j))
@@ -520,7 +551,6 @@ class SynapsesCounter(QWidget):
                     continue
                 else:
                     # mark the found pixels
-                    # print('sizeOverlap =', sizeOverlap)
                     overlap_mask[r3, c3] = 1
 
         return overlap_mask
