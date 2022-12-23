@@ -1,0 +1,77 @@
+(napari-env2) C:\Users\lampen\Documents\napari_plugins\napari-synapses-counter>napari
+type(channel) <class 'numpy.ndarray'>
+shape (1024, 1024)
+dtype bool
+num_features 282
+type(channel) <class 'numpy.ndarray'>
+shape (1024, 1024)
+dtype bool
+num_features 338
+type(overlapMask) <class 'numpy.ndarray'>
+shape (1024, 1024)
+dtype float64
+
+
+(napari-env2) C:\Users\lampen\Documents\napari_plugins\napari-synapses-counter>napari
+type(channel) <class 'numpy.ndarray'>
+shape (1024, 1024)
+dtype bool
+num_features 282
+type(channel) <class 'numpy.ndarray'>
+shape (1024, 1024)
+dtype bool
+num_features 338
+type(overlapMask) <class 'numpy.ndarray'>
+shape (1024, 1024)
+dtype int32
+<class 'pandas.core.frame.DataFrame'>
+   label  centroid-0  centroid-1
+0      1  518.266464   517.86507
+
+
+(napari-env2) C:\Users\lampen\Documents\napari_plugins\napari-synapses-counter>napari
+num_features 282
+num_features 338
+num_features 137
+<class 'pandas.core.frame.DataFrame'>
+     label   centroid-0  centroid-1
+0        1    29.373333  520.546667
+1        2    38.540984  544.163934
+2        3    41.674699  273.578313
+3        4    49.000000  404.108696
+4        5    59.014925  967.656716
+..     ...          ...         ...
+132    133  1002.395604  262.543956
+133    134  1007.862069   17.220690
+134    135  1010.367089  238.240506
+135    136  1011.108108  653.810811
+136    137  1007.666667  891.393939
+
+[137 rows x 3 columns]
+
+
+(napari-env2) C:\Users\lampen\Documents\napari_plugins\napari-synapses-counter>napari
+num_features 282
+num_features 338
+num_features 137
+<class 'dict'>
+{'label': array([  1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,
+       ...
+       131, 132, 133, 134, 135, 136, 137]),
+'centroid-0': array([  29.37333333,   38.54098361,   41.6746988, ...
+       1007.66666667]),
+'centroid-1': array([ 520.54666667,  544.16393443,  273.57831325, ...
+        891.39393939]),
+'equivalent_diameter_area': array([ 9.77205024,  8.81292302, 10.28002345, ...
+		11.22723096])}
+
+
+(napari-env2) C:\Users\lampen\Documents\napari_plugins\napari-synapses-counter>napari
+num_features 282
+num_features 338
+num_features 137
+type(centroid0) <class 'numpy.ndarray'>
+shsape (137,)
+dtype float64
+
+

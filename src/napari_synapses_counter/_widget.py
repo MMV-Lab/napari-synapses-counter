@@ -20,24 +20,6 @@ import sys
 from tifffile import imread, imwrite
 
 
-class MyParticleAnalyzer:
-    def __init__(self, minSize, maxSize, minCirc, maxCirc):
-        self.myCount = 0
-        self.myTotalSize = 0
-        self.mySumSqSize = 0
-        print('call ParticleAnalyzer,', 'minSize', minSize, 'maxSize', maxSize)
-
-
-class MyParticleAnalyzer3D:
-    def __init__(self, minSize, maxSize, minCirc, maxCirc):
-        self.myCount = 0
-        self.myTotalSize = 0
-        self.mySumSqSize = 0
-        self.minSize = int(round(minSize, 0))
-        self.maxSize = int(round(maxSize, 0))
-        print('do whatever it has to do,', 'minSize', minSize, 'maxSize', maxSize)
-
-
 class SynapsesCounter(QWidget):
     def __init__(self, napari_viewer):
         super().__init__()
@@ -107,13 +89,19 @@ class SynapsesCounter(QWidget):
         self.pb_outputButton.setEnabled(False)
         self.lb_outputDirField = QLabel()
 
+        self.pb_selectImage = QPushButton('Select image')
+        self.pb_selectImage.clicked.connect(self.select_image)
+        self.cb_selectImage = QComboBox()
+
         # place the widgets within the 2nd grid
-        grid2.addWidget(self.pb_inputButton,         0, 0)
-        grid2.addWidget(self.lb_inputDirField,       0, 1)
-        grid2.addWidget(self.xb_doSubFoldersButton,  1, 0)
-        grid2.addWidget(self.xb_doOutputButton,      2, 0)
-        grid2.addWidget(self.pb_outputButton,        3, 0)
-        grid2.addWidget(self.lb_outputDirField,      3, 1)
+        grid2.addWidget(self.pb_inputButton,        0, 0)
+        grid2.addWidget(self.lb_inputDirField,      0, 1)
+        grid2.addWidget(self.xb_doSubFoldersButton, 1, 0)
+        grid2.addWidget(self.xb_doOutputButton,     2, 0)
+        grid2.addWidget(self.pb_outputButton,       3, 0)
+        grid2.addWidget(self.lb_outputDirField,     3, 1)
+        grid2.addWidget(self.pb_selectImage,        4, 0)
+        grid2.addWidget(self.cb_selectImage,        4, 1)
 
         # Analysis settings
         # first column: labels
@@ -142,23 +130,21 @@ class SynapsesCounter(QWidget):
         # second column: data
         self.cb_imgType = QComboBox()
         self.cb_imgType.addItems(['Multi-channel', 'RGB'])
-        self.cb_imgType.setCurrentIndex(0)      # Multi-channel
+        self.cb_imgType.setCurrentIndex(1)      # RGB
         self.cb_imgType.currentTextChanged.connect(self.img_type_changed)
 
-        list1 = ['C1', 'C2', 'C3', 'C4', 'C5']
+        list1 = ['red', 'green', 'blue']
         self.cb_preChannelTag = QComboBox()
         self.cb_preChannelTag.addItems(list1)
-        self.cb_preChannelTag.setCurrentIndex(0)    # C1
+        self.cb_preChannelTag.setCurrentIndex(0)    # red
         self.cb_postChannelTag = QComboBox()
         self.cb_postChannelTag.addItems(list1)
-        self.cb_postChannelTag.setCurrentIndex(2)   # C3
+        self.cb_postChannelTag.setCurrentIndex(1)   # green
 
-        list1 = ['Default', 'Huang', 'Intermodes', 'IsoData', 'IJ_IsoData', \
-            'Li', 'MaxEntropy', 'Mean', 'MinError', 'Minimum', 'Moments', \
-            'Otsu', 'Percentile', 'RenyiEntropy', 'Shanbhag', 'Triangle', 'Yen']
+        list1 = ['Isodata', 'Li', 'Mean', 'Minimum', 'Otsu', 'Triangle', 'Yen']
         self.cb_threshMethod = QComboBox()
         self.cb_threshMethod.addItems(list1)
-        self.cb_threshMethod.setCurrentIndex(11)      # Otsu
+        self.cb_threshMethod.setCurrentIndex(4)     # Otsu
 
         self.le_resizeWidth  = QLineEdit('0')
         self.le_rollBallRad  = QLineEdit('10.0')
@@ -243,6 +229,13 @@ class SynapsesCounter(QWidget):
         self.lb_outputDirField.setText(folder)
 
 
+    def select_image(self):
+        print('Select image')
+        self.cb_selectImage.clear()
+        for layer in self.viewer.layers:
+            self.cb_selectImage.addItem(layer.name)
+
+
     def img_type_changed(self, img_type):
         if img_type == 'Multi-channel':
             list1 = ['C1', 'C2', 'C3', 'C4', 'C5']
@@ -267,13 +260,14 @@ class SynapsesCounter(QWidget):
         self.xb_doOutputButton.setChecked(False)
         self.pb_outputButton.setEnabled(False)
         self.lb_outputDirField.clear()
-        self.cb_imgType.setCurrentIndex(0)  # Multi-channel
-        self.cb_preChannelTag.setCurrentIndex(0)  # red
-        self.cb_postChannelTag.setCurrentIndex(2) # green
+        self.cb_selectImage.clear()
+        self.cb_imgType.setCurrentIndex(0)          # Multi-channel
+        self.cb_preChannelTag.setCurrentIndex(0)    # C1
+        self.cb_postChannelTag.setCurrentIndex(2)   # C3
         self.le_resizeWidth.setText('0')
         self.le_rollBallRad.setText('10.0')
         self.le_maxFiltRad.setText('2.0')
-        self.cb_threshMethod.setCurrentIndex(11) # Otsu
+        self.cb_threshMethod.setCurrentIndex(4)     # Otsu
         self.lw_minDistance.setText('15')
         self.le_minSizePre.setText('10.0')
         self.le_maxSizePre.setText('400.0')
@@ -284,7 +278,7 @@ class SynapsesCounter(QWidget):
 
     def ok_button(self):
         parameter = self.get_parameter()
-        print('parameter:', parameter)    # test output
+        # print('parameter:', parameter)    # test output
         if parameter['Error'] == True:
             return
         self.runSynapseCounter(parameter)
@@ -389,24 +383,6 @@ class SynapsesCounter(QWidget):
 
 
     def runSynapseCounter(self, parameter):
-        minSize = min(parameter['minSizePre'], parameter['minSizePost'])
-        maxSize = max(parameter['maxSizePre'], parameter['maxSizePost'])
-
-        '''if parameter['is3d']:
-            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
-                parameter['minSizePre'], parameter['maxSizePre'], 0.0, 1.0))
-            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
-                parameter['minSizePost'], parameter['maxSizePost'], 0.0, 1.0))
-            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
-                minSize, maxSize, 0.0, 1.0))
-        else:
-            self.partAnalyzers.append(MyParticleAnalyzer( \
-                parameter['minSizePre'], parameter['maxSizePre'], 0.0, 1.0))
-            self.partAnalyzers.append(MyParticleAnalyzer( \
-                parameter['minSizePost'], parameter['maxSizePost'], 0.0, 1.0))
-            self.partAnalyzers.append(MyParticleAnalyzer( \
-                minSize, maxSize, 0.0, 1.0)) '''
-
         for layer in self.viewer.layers:
             #if layer.name == 'control11' and type(layer) == Image:
             if type(layer) == Image:
@@ -431,28 +407,34 @@ class SynapsesCounter(QWidget):
             elif parameter['postChannelTag'] == 'blue':
                 postChannel = image[:, :, 2]
 
-        # Work with the presynaptic protein channel
+        # Evaluate the presynaptic protein channel
         preChannel = self.cleanUp(preChannel, parameter)
         self.viewer.add_image(data=preChannel, name='presynaptic proteins')
 
-        preProps = regionprops_table(preChannel, properties=('label', 'centroid', \
-            'equivalent_diameter_area', 'eccentricity'))
-        df = DataFrame(preProps)
-        #print(df)
-
-        # Work with the postsynaptic protein channel
+        # Evaluate the postsynaptic protein channel
         postChannel = self.cleanUp(postChannel, parameter)
         self.viewer.add_image(data=postChannel, name='postsynaptic proteins')
 
-        postProps = regionprops_table(postChannel, properties=('label', 'centroid', \
-            'equivalent_diameter_area', 'eccentricity'))
-        df = DataFrame(postProps)
-        #print(df)
-
-        #overlapMask = np.logical_and(preChannel, postChannel)
+        # Determine an overlap mask (single class) and calculate a region
+        # segmentation with watershed
         overlapMask = self.calculate_overlap(preChannel, postChannel, \
             parameter['overlapLimit'])
+        overlapMask = self.region_segmentation(overlapMask, parameter)
         self.viewer.add_image(data=overlapMask, name='overlap mask')
+
+        properties = regionprops_table(overlapMask, properties=('label', \
+            'centroid', 'equivalent_diameter_area'))
+        label = properties['label']
+        centroid0 = properties['centroid-0']
+        centroid1 = properties['centroid-1']
+        diameter = properties['equivalent_diameter_area']
+        meanDiameter = np.mean(diameter)
+        print('mean(diameter)', meanDiameter, 'px')
+
+        """points = np.concatenate((centroid0, centroid1))
+        print('type(points)', type(points))
+        print('shape', points.shape)
+        print('dtype', points.dtype) """
 
 
     def cleanUp(self, channel, parameter):
@@ -510,9 +492,28 @@ class SynapsesCounter(QWidget):
         return channel
 
 
+    def region_segmentation(self, overlapMask, parameter):
+        # a) Calculate the Euclidean distance to the background
+        distance = distance_transform_edt(overlapMask)
+
+        # b) Find the local maxima of 'distance'
+        coords = peak_local_max(distance, min_distance=parameter['minDistance'], \
+            labels=overlapMask)
+        mask = np.zeros(distance.shape, dtype=bool)
+        mask[tuple(coords.T)] = True
+
+        # c) label features in the array 'mask'
+        markers, num_features = label(mask)
+
+        # d) Find watershed basins in 'distance' flooded from given markers
+        result = watershed(-distance, markers, mask=overlapMask)
+        print('num_features', num_features)
+        return result
+
+
     def calculate_overlap(self, preChannel, postChannel, overlapLimit):
         # Preset the mask with zeros
-        overlap_mask = np.zeros(preChannel.shape)
+        overlap_mask = np.zeros(preChannel.shape, dtype=int)
         overlapLimit /= 100.0           # overlapLimit is in %
 
         # find the numbers of segments in the preChannel

@@ -1,3 +1,21 @@
+class MyParticleAnalyzer:
+    def __init__(self, minSize, maxSize, minCirc, maxCirc):
+        self.myCount = 0
+        self.myTotalSize = 0
+        self.mySumSqSize = 0
+        print('call ParticleAnalyzer,', 'minSize', minSize, 'maxSize', maxSize)
+
+
+class MyParticleAnalyzer3D:
+    def __init__(self, minSize, maxSize, minCirc, maxCirc):
+        self.myCount = 0
+        self.myTotalSize = 0
+        self.mySumSqSize = 0
+        self.minSize = int(round(minSize, 0))
+        self.maxSize = int(round(maxSize, 0))
+        print('do whatever it has to do,', 'minSize', minSize, 'maxSize', maxSize)
+
+
     def __str__(self):
         formatstr = 'Analyze synaptics:\n' + \
             '\tChoose input source: current image=%s, batch mode=%s\n' + \
@@ -53,3 +71,26 @@
             print('image.ndim', image.ndim)
             #print('image.size', image.size)
             print('image.dtype', image.dtype)
+
+
+    def runSynapseCounter(self, parameter):
+        minSize = min(parameter['minSizePre'], parameter['minSizePost'])
+        maxSize = max(parameter['maxSizePre'], parameter['maxSizePost'])
+
+        if parameter['is3d']:
+            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
+                parameter['minSizePre'], parameter['maxSizePre'], 0.0, 1.0))
+            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
+                parameter['minSizePost'], parameter['maxSizePost'], 0.0, 1.0))
+            self.partAnalyzers3D.append(MyParticleAnalyzer3D( \
+                minSize, maxSize, 0.0, 1.0))
+        else:
+            self.partAnalyzers.append(MyParticleAnalyzer( \
+                parameter['minSizePre'], parameter['maxSizePre'], 0.0, 1.0))
+            self.partAnalyzers.append(MyParticleAnalyzer( \
+                parameter['minSizePost'], parameter['maxSizePost'], 0.0, 1.0))
+            self.partAnalyzers.append(MyParticleAnalyzer( \
+                minSize, maxSize, 0.0, 1.0))
+
+
+
