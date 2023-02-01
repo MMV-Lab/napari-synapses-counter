@@ -1,9 +1,10 @@
 import numpy as np
 from napari.layers import Image
 from pandas import DataFrame
-from qtpy.QtWidgets import QWidget, QLabel, QPushButton, QRadioButton, \
-    QCheckBox, QLineEdit, QComboBox, QHBoxLayout, QVBoxLayout, QGridLayout, \
-    QStackedLayout, QButtonGroup, QScrollArea, QFileDialog, QMessageBox
+from qtpy.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, \
+    QPushButton, QRadioButton, QCheckBox, QLineEdit, QComboBox, \
+    QVBoxLayout, QGridLayout, QButtonGroup, QScrollArea, QFileDialog, \
+    QMessageBox
 from qtpy.QtCore import Qt
 from scipy.ndimage import gaussian_filter, distance_transform_edt, label
 from skimage.feature import peak_local_max
@@ -22,70 +23,26 @@ class SynapsesCounter(QWidget):
         super().__init__()
         self.viewer = napari_viewer
 
-        # 3 buttons to select the file card
-        button1 = QPushButton('File')
-        button2 = QPushButton('Settings')
-        button3 = QPushButton('Size')
-        button1.clicked.connect(self.select_card)
-        button2.clicked.connect(self.select_card)
-        button3.clicked.connect(self.select_card)
-
-        hBox1 = QHBoxLayout()
-        hBox1.addWidget(button1)
-        hBox1.addWidget(button2)
-        hBox1.addWidget(button3)
-
-        # 4 Grid-Layouts in the stacked layout
+        # arange the layouts
         grid1 = QGridLayout()
         grid2 = QGridLayout()
-        vBox = QVBoxLayout()
-        vBox.addLayout(grid1)
-        vBox.addLayout(grid2)
-        widget1 = QWidget()
-        widget1.setLayout(vBox)
-
         grid3 = QGridLayout()
-        widget2 = QWidget()
-        widget2.setLayout(grid3)
-        
         grid4 = QGridLayout()
-        widget3 = QWidget()
-        widget3.setLayout(grid4)
 
-        self.stack = QStackedLayout()
-        self.stack.addWidget(widget1)
-        self.stack.addWidget(widget2)
-        self.stack.addWidget(widget3)
+        vbox1 = QVBoxLayout()
+        vbox1.addLayout(grid1)
+        vbox1.addLayout(grid2)
+        vbox1.addLayout(grid3)
+        vbox1.addLayout(grid4)
 
-        # some buttons
-        button4 = QPushButton('Reset to defaults')
-        button5 = QPushButton('OK')
-        button6 = QPushButton('Cancel')
-        # button7 = QPushButton('Help')
-        button4.setToolTip('Reset all fields to default values')
-        button4.clicked.connect(self.button_clicked)
-        button5.clicked.connect(self.button_clicked)
-        button6.clicked.connect(self.button_clicked)
+        widget1 = QWidget()
+        widget1.setLayout(vbox1)
 
-        hBox2 = QHBoxLayout()
-        hBox2.addWidget(button4)
-        hBox2.addWidget(button5)
-        hBox2.addWidget(button6)
-        # hBox2.addWidget(button7)
-
-        page = QVBoxLayout()
-        page.addLayout(hBox1)
-        page.addLayout(self.stack)
-        page.addLayout(hBox2)
-        self.setLayout(page)
-
-        """
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(widget1)
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(scroll)
-        """
 
         # Choose input source
         grid1.addWidget(QLabel('Choose input source:'), 0, 0)
@@ -167,6 +124,10 @@ class SynapsesCounter(QWidget):
             'Maximum filter radius:',
             'Method of threshold adjustment:',
             'Min. distance for peak_local_max',
+            'Presynaptic particle size',
+            'Max. presynaptic particle size',
+            'Min. postsynaptic particle size',
+            'Max. postsynaptic particle size',
             'Lower overlap limit']:
             label = QLabel(lbl)
             grid3.addWidget(label, row, 0, alignment=Qt.AlignRight)
@@ -217,90 +178,50 @@ class SynapsesCounter(QWidget):
         grid3.addWidget(self.le_minDistance, 8, 1)
         grid3.addWidget(QLabel('px'), 8, 2)
 
-        # Lower overlap limit
-        self.le_overlapLimit = QLineEdit('10.0')
-        grid3.addWidget(self.le_overlapLimit, 9, 1)
-        grid3.addWidget(QLabel('%'), 9, 2)
-
-        # first column: label
-        row = 0
-        for lbl in [
-            'Presynaptic particle size',
-            'Max. presynaptic particle size',
-            'Min. postsynaptic particle size',
-            'Max. postsynaptic particle size']:
-            label = QLabel(lbl)
-            grid4.addWidget(label, row, 0, alignment=Qt.AlignRight)
-            row += 1
-
         # Min and max presynaptic particle size
         self.le_minSizePre = QLineEdit('10.0')
-        grid4.addWidget(self.le_minSizePre, 0, 1)
+        grid3.addWidget(self.le_minSizePre, 9, 1)
 
         self.le_maxSizePre = QLineEdit('400.0')
-        grid4.addWidget(self.le_maxSizePre, 1, 1)
+        grid3.addWidget(self.le_maxSizePre, 10, 1)
 
         # Min and max postsynaptic particle size
         self.le_minSizePost = QLineEdit('10.0')
-        grid4.addWidget(self.le_minSizePost, 2, 1)
+        grid3.addWidget(self.le_minSizePost, 11, 1)
 
         self.le_maxSizePost = QLineEdit('400.0')
-        grid4.addWidget(self.le_maxSizePost, 3, 1)
+        grid3.addWidget(self.le_maxSizePost, 12, 1)
+
+        # Lower overlap limit
+        self.le_overlapLimit = QLineEdit('10.0')
+        grid3.addWidget(self.le_overlapLimit, 13, 1)
+        grid3.addWidget(QLabel('%'), 13, 2)
 
         # third column: units
-        for row in range(0, 4):
-            grid4.addWidget(QLabel('px² or voxels'), row, 2)
+        for row in range(9, 13):
+            grid3.addWidget(QLabel('px² or voxels'), row, 2)
 
+        # some buttons
+        b_reset = QPushButton('Reset to defaults')
+        b_reset.setToolTip('Reset all fields to default values')
+        b_reset.clicked.connect(self.reset)
+        grid4.addWidget(b_reset, 0, 0)
 
-    def select_card(self):
-        # select the file card in the stacked layout
-        button = self.sender()
-        if button.text() == 'File':
-            self.stack.setCurrentIndex(0)
-        elif button.text() == 'Settings':
-            self.stack.setCurrentIndex(1)
-        elif button.text() == 'Size':
-            self.stack.setCurrentIndex(2)
+        b_OK = QPushButton('OK')
+        b_OK.clicked.connect(self.ok_button)
+        grid4.addWidget(b_OK, 0, 1)
 
+        b_cancel = QPushButton('Cancel')
+        b_cancel.clicked.connect(self.cancel)
+        grid4.addWidget(b_cancel, 0, 2)
 
-    def button_clicked(self):
-        button = self.sender()
-        if button.text() == 'Reset to defaults':
-            self.rb_currentImage.setChecked(True)
-            self.rb_2D.setChecked(True)
-            self.b_inputFolder.setEnabled(False)
-            self.l_inputFolder.clear()
-            self.xb_searchInSubfolders.setChecked(False)
-            self.xb_saveIntermediate.setChecked(False)
-            self.b_outputFolder.setEnabled(False)
-            self.l_outputFolder.clear()
-            self.cb_selectImage.clear()
-            self.cb_imageType.setCurrentIndex(0)        # Multi-channel
-            self.cb_preChannel.setCurrentIndex(0)       # C1
-            self.cb_postChannel.setCurrentIndex(2)      # C3
-            self.le_resizeImageWidth.setText('0')
-            self.le_rollingBallRadius.setText('10.0')
-            self.le_maxFilterRadius.setText('2.0')
-            self.cb_threshMethod.setCurrentIndex(4)     # Otsu
-            self.le_minDistance.setText('15')
-            self.le_minSizePre.setText('10.0')
-            self.le_maxSizePre.setText('400.0')
-            self.le_minSizePost.setText('10.0')
-            self.le_maxSizePost.setText('400.0')
-            self.le_overlapLimit.setText('10.0')
-        elif button.text() == 'OK':
-            parameter = self.get_parameter()
-            # print('parameter:', parameter)    # test output
-            if parameter['Error'] == True:
-                return
-            self.runSynapseCounter(parameter)
-        elif button.text() == 'cancel':
-            self.close()
+        # b_help = QPushButton('Help')
+        # grid4.addWidget(b_help, 0, 3)
 
 
     def input_source(self):
-        radio_button = self.sender()
-        if radio_button.text() == 'current image':
+        rb = self.sender()
+        if rb.text() == 'current image':
             self.b_inputFolder.setEnabled(False)
         else:
             self.b_inputFolder.setEnabled(True)
@@ -342,6 +263,43 @@ class SynapsesCounter(QWidget):
         self.cb_postChannel.clear()
         self.cb_postChannel.addItems(list1)
         self.cb_postChannel.setCurrentIndex(1)
+
+
+    def reset(self):
+        self.rb_currentImage.setChecked(True)
+        self.rb_2D.setChecked(True)
+        self.b_inputFolder.setEnabled(False)
+        self.l_inputFolder.clear()
+        self.xb_searchInSubfolders.setChecked(False)
+        self.xb_saveIntermediate.setChecked(False)
+        self.b_outputFolder.setEnabled(False)
+        self.l_outputFolder.clear()
+        self.cb_selectImage.clear()
+        self.cb_imageType.setCurrentIndex(0)        # Multi-channel
+        self.cb_preChannel.setCurrentIndex(0)       # C1
+        self.cb_postChannel.setCurrentIndex(2)      # C3
+        self.le_resizeImageWidth.setText('0')
+        self.le_rollingBallRadius.setText('10.0')
+        self.le_maxFilterRadius.setText('2.0')
+        self.cb_threshMethod.setCurrentIndex(4)     # Otsu
+        self.le_minDistance.setText('15')
+        self.le_minSizePre.setText('10.0')
+        self.le_maxSizePre.setText('400.0')
+        self.le_minSizePost.setText('10.0')
+        self.le_maxSizePost.setText('400.0')
+        self.le_overlapLimit.setText('10.0')
+
+
+    def ok_button(self):
+        parameter = self.get_parameter()
+        # print('parameter:', parameter)    # test output
+        if parameter['Error'] == True:
+            return
+        self.runSynapseCounter(parameter)
+
+
+    def cancel(self):
+        self.close()
 
 
     def get_parameter(self):
@@ -535,7 +493,7 @@ class SynapsesCounter(QWidget):
         channel = channel - background
 
         # Step 4: skimage.morphology.remove_small_objects
-        channel = remove_small_objects(channel > 0, parameter['maxFilterRadius'])
+        channel = remove_small_objects(channel, parameter['maxFilterRadius'])
 
         # Step 5: skimage.filters.threshold_xxx
         if parameter['threshMethod'] == 'Isodata':
